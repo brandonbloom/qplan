@@ -18,6 +18,8 @@
   constraint."
   (:require [clojure.set :as set]))
 
+(defn conjs [set x]
+  (conj (or set #{}) x))
 
 (defn- free-method
   "Selects the best available free method from a given collection of methods
@@ -25,12 +27,11 @@
   [methods neighborhoods]
   ;;TODO: Can this work be optimized out of the plan loop?
   (let [outputs (for [method methods, variable (:outputs method)]
-                  [variable method])
+                  [variable (neighborhoods method)])
         ;; A variable is free if it can only be provided by one constraint.
         free-vars (->> outputs
-                    (reduce (fn [sources [variable method]]
-                              (let [source-set (conj (get sources #{}) method)]
-                                (assoc sources variable source-set)))
+                    (reduce (fn [sources [var neighborhood]]
+                              (update-in sources [var] conjs neighborhood))
                             {})
                     (filter #(= (-> % val count) 1))
                     keys set)
@@ -39,7 +40,8 @@
                                (every? free-vars outputs))
                              methods)]
     ;; Prefer methods which output fewer variables.
-    (apply min-key #(-> % :outputs count) free-methods)))
+    (when (seq free-methods)
+      (apply min-key #(-> % :outputs count) free-methods))))
 
 (defn- plan
   "Returns a set of methods which can be traversed to to reassign each
