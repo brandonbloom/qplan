@@ -9,29 +9,30 @@
   variables and whose hyperedges are constraints. However, here, dataflow
   problems are represented by a biparite graph whose vertices are variables
   and methods. A method is a function from some set of variables to some
-  disjoint set of variables. Each constraint must specify some set of methods,
-  a subset of which can be evaluated to satisfy the constraint. The directed
-  edges of the biparite graph connect variables to the inputs of methods and
-  then from the outputs of methods back to variables. In this representation,
-  constraints need not be reified during solving. Instead, the notion of a
-  method's neighborhood is used to represent all methods produced by the same
-  constraint."
+  disjoint set of variables. Each constraint is simply a set of methods, each
+  one of which can be evaluated individually to satisfy the constraint. The
+  directed edges of the biparite graph connect variables to the inputs of
+  methods and then from the outputs of methods back to variables.
+
+  A method is a map with the three keys :inputs, :outputs, and :f. The :f key
+  is a function which takes a map whose keys are equal to the :inputs set
+  and returns a map whose keys are equal to the :outputs set."
   (:require [clojure.set :as set]))
 
 (defn conjs [set x]
   (conj (or set #{}) x))
 
 (defn- free-method
-  "Selects the best available free method from a given collection of methods
-  and a mapping from method to a neighborhood of methods."
-  [methods neighborhoods]
+  "Selects the best available free method from a given
+  collection of methods and a constraint map."
+  [methods constraints]
   ;;TODO: Can this work be optimized out of the plan loop?
   (let [outputs (for [method methods, variable (:outputs method)]
-                  [variable (neighborhoods method)])
+                  [variable (constraints method)])
         ;; A variable is free if it can only be provided by one constraint.
         free-vars (->> outputs
-                    (reduce (fn [sources [var neighborhood]]
-                              (update-in sources [var] conjs neighborhood))
+                    (reduce (fn [sources [variable constraint]]
+                              (update-in sources [variable] conjs constraint))
                             {})
                     (filter #(= (-> % val count) 1))
                     keys set)
@@ -46,24 +47,23 @@
 (defn- plan
   "Returns a set of methods which can be traversed to to reassign each
   variable at most once. Exactly one method will be selected from each
-  neighborhood represented in the methods set. Additional methods in the
-  neighborhoods mapping will be ignored. Returns nil if no solution exists."
-  [methods neighborhoods]
+  constraint represented in the methods set. Additional methods in the
+  constraints map will be ignored. Returns nil if no solution exists."
+  [methods constraints]
   (loop [satisfied #{}, unsatisfied methods]
     (if (empty? unsatisfied)
       satisfied
-      (when-let [method (free-method unsatisfied neighborhoods)]
+      (when-let [method (free-method unsatisfied constraints)]
         (recur (conj satisfied method)
-               (set/difference unsatisfied (neighborhoods method)))))))
+               (set/difference unsatisfied (constraints method)))))))
 
-(defn- make-neighborhoods
+(defn- constraint-map
   "Given a collection of constraints, returns a mapping of each method to
   the set of methods owned by the same constraint."
   [constraints]
-  (into {} (for [c constraints
-                 :let [methods (:methods c)]
-                 m methods]
-             [m methods])))
+  (into {} (for [constraint constraints
+                 method constraint]
+             [method constraint])))
 
 (defn- solve
   "Given a collection of required constraints and a sequence of prioritized
@@ -71,27 +71,27 @@
   maximize the number of satisfied prioritized constraints.
   Returns nil if one or more required constraints can not satisfied."
   [required prioritized]
-  (let [neighborhoods (make-neighborhoods (concat required prioritized))
-        methods (set (mapcat :methods required))]
-    (when-let [solution (plan methods neighborhoods)]
+  (let [constraints (constraint-map (concat required prioritized))
+        methods (set (apply concat required))]
+    (when-let [solution (plan methods constraints)]
       (loop [solution solution
              satisfied methods
              unsatisfied prioritized]
         (if (empty? unsatisfied)
           solution
           (let [constraint (first unsatisfied)
-                satisfied* (set/union satisfied (:methods constraint))
+                satisfied* (set/union satisfied constraint)
                 unsatisfied* (next unsatisfied)]
-            (if-let [solution* (plan satisfied* neighborhoods)]
+            (if-let [solution* (plan satisfied* constraints)]
               (recur solution* satisfied* unsatisfied*)
               (recur solution satisfied unsatisfied*))))))))
 
 (defn stay-constraint
   "Returns a constraint which binds some variable to a constant value."
   [variable value]
-  {:methods #{{:inputs #{}
-               :outputs #{variable}
-               :f (constantly {variable value})}}})
+  #{{:inputs #{}
+     :outputs #{variable}
+     :f (constantly {variable value})}})
 
 (defn evaluate
   "Given a collection of constraints and a sequence of [variable value] pairs
@@ -103,6 +103,7 @@
   (let [stays (map #(apply stay-constraint %) values)
         variables (into {} values)]
     (reduce (fn [variables {:keys [inputs outputs f] :as method}]
+              ;TODO: validate input and output keys
               (into variables (f variables)))
             variables
             (solve constraints stays))))

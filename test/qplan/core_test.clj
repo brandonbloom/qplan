@@ -3,19 +3,18 @@
         qplan.core))
 
 (deftest midpoint-test
-  (let [constraint {:variables '#{a b c}
-                    :methods #{{:inputs '#{a b}
-                                :outputs '#{c}
-                                :f (fn [{:syms [a b]}]
-                                     {'c (- (* 2 b) a)})}
-                               {:inputs '#{b c}
-                                :outputs '#{a}
-                                :f (fn [{:syms [b c]}]
-                                     {'a (- (* 2 b) c)})}
-                               {:inputs '#{a c}
-                                :outputs '#{b}
-                                :f (fn [{:syms [a c]}]
-                                     {'b (/ ( + a c) 2.0)})}}}]
+  (let [constraint #{{:inputs '#{a b}
+                      :outputs '#{c}
+                      :f (fn [{:syms [a b]}]
+                           {'c (- (* 2 b) a)})}
+                     {:inputs '#{b c}
+                      :outputs '#{a}
+                      :f (fn [{:syms [b c]}]
+                           {'a (- (* 2 b) c)})}
+                     {:inputs '#{a c}
+                      :outputs '#{b}
+                      :f (fn [{:syms [a c]}]
+                           {'b (/ ( + a c) 2.0)})}}]
     (testing "Pre-solved"
       (is (= '{a 10 b 20 c 30}
              (evaluate [constraint] '[[a 10] [b 20] [c 30]]))))
