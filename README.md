@@ -1,13 +1,15 @@
 # qplan
 
-A Clojure library designed to ... well, that part is up to you.
+Clojure solver for multi-way, multi-output dataflow property models.
+
+See Bradley Vander Zanden (1996) and Freeman, Jarvi, & Smith (2009).
 
 ## Usage
 
-FIXME
+See `./test/qplan/core_test.clj` for examples.
 
 ## License
 
-Copyright © 2012 FIXME
+Copyright © 2012 Brandon Bloom
 
 Distributed under the Eclipse Public License, the same as Clojure.
