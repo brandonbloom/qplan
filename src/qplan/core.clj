@@ -19,8 +19,7 @@
   and returns a map whose keys are equal to the :outputs set."
   (:require [clojure.set :as set]))
 
-(defn conjs [set x]
-  (conj (or set #{}) x))
+(def conjs (fnil conj #{}))
 
 (defn- free-method
   "Selects the best available free method from a given
