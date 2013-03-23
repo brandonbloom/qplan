@@ -6,7 +6,7 @@ See Bradley Vander Zanden (1996) and Freeman, Jarvi, & Smith (2009).
 
 ## Usage
 
-See `./test/qplan/core_test.clj` for examples.
+See [the tests](./test/qplan/core_test.clj) for examples.
 
 ## License
 
