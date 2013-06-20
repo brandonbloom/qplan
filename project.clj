@@ -1,4 +1,4 @@
-(defproject qplan "0.1.0-SNAPSHOT"
+(defproject qplan "0.1.0"
   :description "Solver for multi-way, multi-output dataflow property models"
   :url "https://github.com/brandonbloom/qplan"
   :license {:name "Eclipse Public License"
